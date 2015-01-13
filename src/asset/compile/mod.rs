@@ -1,19 +1,37 @@
 use std::collections::HashMap;
 use std::path::Path;
 use std::io::{File, FileMode, FileAccess};
+use std::io::fs::{self, PathExtensions};
 use serialize::json::{self, Json};
 use uuid::Uuid;
 
-pub fn compile_asset(path: Path) {
+pub fn compile_path(path: &Path) {
+    if path.is_dir() {
+        let contents = fs::readdir(path).ok().unwrap();
+        for entry in contents.iter() {
+            if entry.is_dir() {
+                compile_path(entry);
+            } else {
+                compile_asset(entry);
+            }
+        }
+    }
+    else if path.is_file() {
+        compile_asset(path);
+    }
+    else { panic!(); }
+}
+
+pub fn compile_asset(path: &Path) {
     let ext = path.extension_str()
         .expect("No extension. Cannot determine file type.");
 
-    let mut file = File::open_mode(&path, FileMode::Open, FileAccess::Read)
+    let mut file = File::open_mode(path, FileMode::Open, FileAccess::Read)
         .ok().expect("Unable to open file.");
 
     match ext {
         "scene" => compile_scene(&mut file),
-        _ => panic!("Unknown file type."),
+        _ => { }
     }
 }
 

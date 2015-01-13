@@ -1,0 +1,23 @@
+{
+    "version": 0,
+    "transforms": [
+        {
+            "id": "da356da1-228f-40c8-ab48-3510a160c49f",
+            "position": "1 2 3",
+            "rotation": "0 0 0 1",
+            "scale": 1
+        },
+        {
+            "id": "6b255092-90b5-42fe-a751-144b27d9870d",
+            "position": "4 5 6",
+            "rotation": "0 0 1 0",
+            "scale": 2
+        },
+        {
+            "id": "fc5f1c7d-d18b-422a-8cc8-316875176953",
+            "position": "7 8 9",
+            "rotation": "0 1 0 0",
+            "scale": 3
+        }
+    ]
+}
