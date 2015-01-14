@@ -11,7 +11,8 @@ fn main() {
     let args = std::os::args();
     let opts = [
         optopt("c", "compile", "Compile a asset file or folder", "PATH"),
-        optopt("p", "pack", "Pack asset files in a folder", "FOLDER")
+        optopt("p", "pack", "Pack asset files in a folder", "FOLDER"),
+        optopt("o", "output", "Specify output folder", "FOLDER"),
     ];
 
     let matches = match getopts(args.tail(), &opts) {
@@ -20,8 +21,13 @@ fn main() {
     };
 
     if matches.opt_present("compile") {
+        if !matches.opt_present("output") {
+            panic!("Output directory not specified.");
+        }
+
         let path = Path::new(matches.opt_str("compile").unwrap());
-        asset::compile::compile_path(&path);
+        let output_folder = Path::new(matches.opt_str("output").unwrap());
+        asset::compile::compile_path(&path, &output_folder);
     }
     else if matches.opt_present("pack") {
 
