@@ -8,3 +8,7 @@ authors = ["Nolan Carnahan <ncarnahan1@gmail.com>"]
 
 getopts = "0.1.4"
 uuid = "*"
+
+[dependencies.cgmath]
+
+git = "https://github.com/bjz/cgmath-rs.git"

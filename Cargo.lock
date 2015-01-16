@@ -2,8 +2,17 @@
 name = "cantus"
 version = "0.0.1"
 dependencies = [
+ "cgmath 0.0.1 (git+https://github.com/bjz/cgmath-rs.git)",
  "getopts 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "uuid 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "cgmath"
+version = "0.0.1"
+source = "git+https://github.com/bjz/cgmath-rs.git#9bb77e6a45a545fe016a2e2f60ccf156e8006a5c"
+dependencies = [
+ "rustc-serialize 0.2.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

@@ -1,3 +1,4 @@
+extern crate cgmath;
 extern crate getopts;
 extern crate serialize;
 extern crate uuid;
@@ -6,6 +7,7 @@ use std::path::Path;
 use getopts::{optopt, optflag, getopts};
 
 mod asset;
+mod scene;
 
 fn main() {
     let args = std::os::args();
