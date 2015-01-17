@@ -22,7 +22,13 @@ impl TransformSystem {
 
         for i in range(0, length) {
             let idx = input.read_le_u32().ok().unwrap();
-            ts.entities.push(id_map[idx].clone());
+            if id_map.contains_key(&idx) {
+                ts.entities.push(id_map[idx]);
+            }
+            else {
+
+            }
+            
         }
         for i in range(0, length) {
             ts.positions.push(Vector3::new(
