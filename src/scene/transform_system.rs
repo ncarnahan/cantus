@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use scene::entity::Entity;
+use scene::entity_manager::EntityManager;
 use cgmath::{Vector3, Quaternion};
 
 pub struct TransformSystem {
@@ -10,43 +11,48 @@ pub struct TransformSystem {
 }
 
 impl TransformSystem {
-    pub fn load(input: &mut Reader, id_map: &mut HashMap<u32, Entity>) -> TransformSystem {
-        let length = input.read_le_u32().ok().unwrap();
+    pub fn new() -> TransformSystem {
+        TransformSystem {
+            entities: Vec::new(),
+            positions: Vec::new(),
+            rotations: Vec::new(),
+            scales: Vec::new(),
+        }
+    }
 
-        let mut ts = TransformSystem {
-            entities: Vec::with_capacity(length as usize),
-            positions: Vec::with_capacity(length as usize),
-            rotations: Vec::with_capacity(length as usize),
-            scales: Vec::with_capacity(length as usize),
-        };
+    pub fn load(&mut self, input: &mut Reader, entity_manager: &mut EntityManager, id_map: &mut HashMap<u32, Entity>) {
+        let length = input.read_le_u32().ok().unwrap() as usize;
+        self.entities.reserve(length);
+        self.positions.reserve(length);
+        self.rotations.reserve(length);
+        self.scales.reserve(length);
 
         for i in range(0, length) {
             let idx = input.read_le_u32().ok().unwrap();
             if id_map.contains_key(&idx) {
-                ts.entities.push(id_map[idx]);
+                self.entities.push(id_map[idx]);
             }
             else {
-
+                let e = entity_manager.create();
+                id_map.insert(idx, e);
+                self.entities.push(e);
             }
-            
         }
         for i in range(0, length) {
-            ts.positions.push(Vector3::new(
+            self.positions.push(Vector3::new(
                 input.read_le_f32().ok().unwrap(),
                 input.read_le_f32().ok().unwrap(),
                 input.read_le_f32().ok().unwrap()));
         }
         for i in range(0, length) {
-            ts.rotations.push(Quaternion::new(
+            self.rotations.push(Quaternion::new(
                 input.read_le_f32().ok().unwrap(),
                 input.read_le_f32().ok().unwrap(),
                 input.read_le_f32().ok().unwrap(),
                 input.read_le_f32().ok().unwrap()));
         }
         for i in range(0, length) {
-            ts.scales.push(input.read_le_f32().ok().unwrap());
+            self.scales.push(input.read_le_f32().ok().unwrap());
         }
-
-        ts
     }
 }
