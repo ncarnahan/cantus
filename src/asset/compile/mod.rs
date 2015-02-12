@@ -1,6 +1,6 @@
-use std::path::Path;
-use std::io::{File, FileMode, FileAccess, FilePermission};
-use std::io::fs::{self, PathExtensions};
+use std::old_path::Path;
+use std::old_io::{File, FileMode, FileAccess, FilePermission};
+use std::old_io::fs::{self, PathExtensions};
 
 mod scene;
 mod scene_tests;
