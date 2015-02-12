@@ -1,14 +1,21 @@
 [package]
-
 name = "cantus"
 version = "0.0.1"
 authors = ["Nolan Carnahan <ncarnahan1@gmail.com>"]
 
 [dependencies]
-
 getopts = "0.2.4"
 uuid = "0.1.9"
 
 [dependencies.cgmath]
-
 git = "https://github.com/bjz/cgmath-rs.git"
+
+[dependencies.glium]
+git = "https://github.com/tomaka/glium"
+optional = false
+
+[dependencies.glutin]
+git = "https://github.com/tomaka/glutin"
+
+[dependencies.glium_macros]
+git = "https://github.com/tomaka/glium"

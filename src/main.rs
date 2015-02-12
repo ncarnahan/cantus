@@ -1,11 +1,18 @@
+#![feature(plugin)]
+#![plugin(glium_macros)]
+
 extern crate cgmath;
 extern crate getopts;
 extern crate serialize;
 extern crate uuid;
+extern crate glutin;
+#[macro_use]
+extern crate glium;
 
 use std::old_path::Path;
 use getopts::Options;
 
+mod application;
 mod asset;
 mod scene;
 
@@ -35,5 +42,6 @@ fn main() {
     }
     else {
         //Run the game
+        application::run();
     }
 }
