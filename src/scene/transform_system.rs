@@ -27,7 +27,7 @@ impl TransformSystem {
         self.rotations.reserve(length);
         self.scales.reserve(length);
 
-        for i in range(0, length) {
+        for i in 0..length {
             let idx = input.read_le_u32().ok().unwrap();
             if id_map.contains_key(&idx) {
                 self.entities.push(id_map[idx]);
@@ -38,20 +38,20 @@ impl TransformSystem {
                 self.entities.push(e);
             }
         }
-        for i in range(0, length) {
+        for i in 0..length {
             self.positions.push(Vector3::new(
                 input.read_le_f32().ok().unwrap(),
                 input.read_le_f32().ok().unwrap(),
                 input.read_le_f32().ok().unwrap()));
         }
-        for i in range(0, length) {
+        for i in 0..length {
             self.rotations.push(Quaternion::new(
                 input.read_le_f32().ok().unwrap(),
                 input.read_le_f32().ok().unwrap(),
                 input.read_le_f32().ok().unwrap(),
                 input.read_le_f32().ok().unwrap()));
         }
-        for i in range(0, length) {
+        for i in 0..length {
             self.scales.push(input.read_le_f32().ok().unwrap());
         }
     }

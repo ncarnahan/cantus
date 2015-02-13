@@ -1,4 +1,4 @@
-#[derive(Show, Eq, PartialEq, Copy, Hash)]
+#[derive(Debug, Eq, PartialEq, Copy, Hash)]
 pub struct Entity {
     pub id: u32
 }

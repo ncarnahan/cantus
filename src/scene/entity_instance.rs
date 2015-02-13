@@ -22,7 +22,7 @@
 /// Systems that do use EntityInstance should wrap it to prevent users from
 /// using EntityInstances that were retrieved from another system.
 
-#[derive(Clone, Show, Eq, PartialEq)]
+#[derive(Copy, Debug, Eq, PartialEq)]
 pub struct EntityInstance {
     pub index: usize
 }
