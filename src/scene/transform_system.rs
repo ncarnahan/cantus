@@ -37,7 +37,7 @@ impl TransformSystem {
         }
     }
 
-    pub fn load(&mut self, input: &mut Reader, entity_manager: &mut EntityManager, id_map: &mut HashMap<u32, Entity>) {
+    pub fn load(&mut self, input: &mut Reader, id_map: &[Entity]) {
         let length = input.read_le_u32().ok().unwrap() as usize;
         self.entities.reserve(length);
         self.positions.reserve(length);
@@ -46,14 +46,7 @@ impl TransformSystem {
 
         for i in 0..length {
             let idx = input.read_le_u32().ok().unwrap();
-            if id_map.contains_key(&idx) {
-                self.entities.push(id_map[idx]);
-            }
-            else {
-                let e = entity_manager.create();
-                id_map.insert(idx, e);
-                self.entities.push(e);
-            }
+            self.entities.push(id_map[idx as usize]);
         }
         for i in 0..length {
             self.positions.push(Vector3::new(
@@ -71,6 +64,29 @@ impl TransformSystem {
         for i in 0..length {
             self.scales.push(input.read_le_f32().ok().unwrap());
         }
+    }
+
+    pub fn save(&self, output: &mut Writer) {
+        output.write_le_u32(self.entities.len() as u32);
+        for en in &self.entities { output.write_le_u32(en.id); }
+        for pos in &self.positions {
+            output.write_le_f32(pos.x);
+            output.write_le_f32(pos.y);
+            output.write_le_f32(pos.z);
+        }
+        for rot in &self.rotations {
+            output.write_le_f32(rot.s);
+            output.write_le_f32(rot.v.x);
+            output.write_le_f32(rot.v.y);
+            output.write_le_f32(rot.v.z);
+        }
+        for scale in &self.scales {
+            output.write_le_f32(*scale);
+        }
+    }
+
+    pub fn exists(&self, entity: Entity) -> bool {
+        self.map.contains_key(&entity)
     }
 
     /// Adds a transform component to an entity.
@@ -288,8 +304,11 @@ impl TransformSystem {
 
 #[test]
 fn test_transform_system_load() {
-    let mut em = EntityManager::new();
-    let mut id_map = HashMap::new();
+    let entities = vec![
+        Entity::new(0, 0),
+        Entity::new(1, 0),
+        Entity::new(2, 0),
+    ];
     let mut input: Vec<u8> = vec![
         0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -301,7 +320,7 @@ fn test_transform_system_load() {
     ];
 
     let mut ts = TransformSystem::new();
-    ts.load(&mut input.as_slice(), &mut em, &mut id_map);
+    ts.load(&mut input.as_slice(), &entities[..]);
 
     assert_eq!(ts.positions, vec![
         Vector3::new(0.0, 0.0, 0.0),
@@ -314,4 +333,18 @@ fn test_transform_system_load() {
         Quaternion::new(0.0, 1.0, 0.0, 0.0)]);
 
     assert_eq!(ts.scales, vec![1.0, 2.0, 3.0]);
+}
+
+#[test]
+fn test_exists() {
+    let mut tr_system = TransformSystem::new();
+    let en1 = Entity::new(0, 0);
+    let en2 = Entity::new(100, 50);
+    assert_eq!(tr_system.exists(en1), false);
+    assert_eq!(tr_system.exists(en2), false);
+    
+    tr_system.create(en1);
+    tr_system.create(en2);
+    assert_eq!(tr_system.exists(en1), true);
+    assert_eq!(tr_system.exists(en2), true);
 }

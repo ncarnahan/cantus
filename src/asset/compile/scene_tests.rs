@@ -2,33 +2,51 @@ use asset::compile::scene;
 
 #[test]
 fn test_compile_scene() {
-    let mut input = "
-        {
-            \"version\": 0,
-            \"transforms\": [
-                {
-                    \"id\": \"da356da1-228f-40c8-ab48-3510a160c49f\",
-                    \"position\": \"0 0 0\",
-                    \"rotation\": \"0 0 0 1\",
-                    \"scale\": 1
-                },
-                {
-                    \"id\": \"6b255092-90b5-42fe-a751-144b27d9870d\",
-                    \"position\": \"0 4 0\",
-                    \"rotation\": \"0 0 1 0\",
-                    \"scale\": 2
-                },
-                {
-                    \"id\": \"fc5f1c7d-d18b-422a-8cc8-316875176953\",
-                    \"position\": \"4 0 0\",
-                    \"rotation\": \"0 1 0 0\",
-                    \"scale\": 3
-                }
-            ]
-        }".as_bytes();
+    let mut input = "{
+        \"version\": 0,
+        \"entities\": [
+            {
+                \"id\": \"da356da1-228f-40c8-ab48-3510a160c49f\",
+                \"components\": [
+                    {
+                        \"type\": \"transform\",
+                        \"position\": \"0 0 0\",
+                        \"rotation\": \"0 0 0 1\",
+                        \"scale\": 1
+                    }
+                ]
+            },
+            {
+                \"id\": \"6b255092-90b5-42fe-a751-144b27d9870d\",
+                \"components\": [
+                    {
+                        \"type\": \"transform\",
+                        \"position\": \"0 4 0\",
+                        \"rotation\": \"0 0 1 0\",
+                        \"scale\": 2
+                    }
+                ]
+            },
+            {
+                \"id\": \"fc5f1c7d-d18b-422a-8cc8-316875176953\",
+                \"components\": [
+                    {
+                        \"type\": \"transform\",
+                        \"position\": \"4 0 0\",
+                        \"rotation\": \"0 1 0 0\",
+                        \"scale\": 3
+                    }
+                ]
+            }
+        ]
+    }".as_bytes();
     
     let mut output: Vec<u8> = Vec::new();
     let expected_output = [
+        //Entity Count
+        0x03, 0x00, 0x00, 0x00,
+
+        //Transform Data
         0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x80, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x40, 0x00, 0x00, 0x00, 0x00,

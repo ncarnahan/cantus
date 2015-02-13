@@ -1,6 +1,8 @@
 use std::collections::HashMap;
-use scene::entity_manager::EntityManager;
-use scene::transform_system::TransformSystem;
+
+pub use scene::entity::Entity;
+pub use scene::entity_manager::EntityManager;
+pub use scene::transform_system::TransformSystem;
 
 mod entity;
 mod entity_instance;
@@ -8,24 +10,33 @@ mod entity_manager;
 mod transform_system;
 
 
-struct Scene {
-    entity_manager: EntityManager,
-    transform_system: TransformSystem,
+pub struct Scene {
+    pub entity_manager: EntityManager,
+    pub transform_system: TransformSystem,
 }
 
 impl Scene {
-    fn load(input: &mut Reader) -> Scene {
-        //When a system finds a new ID, it creates a new Entity.
-        //The Entity that corresponds to an ID is tracked by this HashMap.
-        let mut id_map = HashMap::new();
-
-        let mut scene = Scene {
+    pub fn new() -> Scene {
+        Scene {
             entity_manager: EntityManager::new(),
             transform_system: TransformSystem::new()
-        };
+        }
+    }
 
-        scene.transform_system.load(input, &mut scene.entity_manager, &mut id_map);
+    pub fn load(&mut self, input: &mut Reader) {
+        //Create all the entities we need
+        let entity_count = input.read_le_u32().ok().unwrap();
+        let mut entities = Vec::with_capacity(entity_count as usize);
+        for i in 0..entity_count {
+            entities.push(self.entity_manager.create());
+        }
 
-        scene
+        //Load each system
+        self.transform_system.load(input, &entities);
+    }
+
+    pub fn save(&self, output: &mut Writer) {
+        //Save each system
+        self.transform_system.save(output);
     }
 }

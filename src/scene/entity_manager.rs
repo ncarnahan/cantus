@@ -55,3 +55,15 @@ impl EntityManager {
         self.destroyed.clear();
     }
 }
+
+//This test is used to ensure that a scene compilation assumption is upheld.
+//The assumption is: From an empty EntityManager, sequential create() calls
+//result in Entities with sequential ids starting from 0.
+#[test]
+fn sequential_test() {
+    let mut manager = EntityManager::new();
+    for i in 0..2*MINIMUM_FREE_INDICES {
+        let en = manager.create();
+        assert_eq!(en.id, i as u32);
+    }
+}
