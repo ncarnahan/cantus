@@ -98,3 +98,59 @@ fn parse_quaternion(json: &Json) -> Quaternion<f32> {
         comps[3].parse().unwrap()
     )
 }
+
+
+
+#[test]
+fn scene_compile_test() {
+    let mut input = "{
+        \"version\": 0,
+        \"entities\": [
+            {
+                \"id\": \"da356da1-228f-40c8-ab48-3510a160c49f\",
+                \"components\": [
+                    {
+                        \"type\": \"transform\",
+                        \"position\": \"0 0 0\",
+                        \"rotation\": \"0 0 0 1\",
+                        \"scale\": 1
+                    }
+                ]
+            },
+            {
+                \"id\": \"6b255092-90b5-42fe-a751-144b27d9870d\",
+                \"components\": [
+                    {
+                        \"type\": \"transform\",
+                        \"position\": \"0 4 0\",
+                        \"rotation\": \"0 0 1 0\",
+                        \"scale\": 2
+                    }
+                ]
+            },
+            {
+                \"id\": \"fc5f1c7d-d18b-422a-8cc8-316875176953\",
+                \"components\": [
+                    {
+                        \"type\": \"transform\",
+                        \"position\": \"4 0 0\",
+                        \"rotation\": \"0 1 0 0\",
+                        \"scale\": 3
+                    }
+                ]
+            }
+        ]
+    }".as_bytes();
+    
+    let mut output: Vec<u8> = Vec::new();
+    compile_scene(&mut input, &mut output);
+
+    let mut scene = Scene::new();
+    scene.load(&mut &output[..]);
+
+    assert!(scene.transform_system.exists(Entity::new(0, 0)));
+    assert!(scene.transform_system.exists(Entity::new(1, 0)));
+    assert!(scene.transform_system.exists(Entity::new(2, 0)));
+    let tr_inst2 = scene.transform_system.get_instance(Entity::new(1, 0));
+    assert_eq!(scene.transform_system.get_position(tr_inst2), Vector3::new(0.0, 4.0, 0.0));
+}

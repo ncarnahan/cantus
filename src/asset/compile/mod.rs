@@ -3,7 +3,6 @@ use std::old_io::{File, FileMode, FileAccess, FilePermission};
 use std::old_io::fs::{self, PathExtensions};
 
 mod scene;
-mod scene_tests;
 
 
 pub fn compile_path(path: &Path, output_folder: &Path) {

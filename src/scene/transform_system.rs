@@ -46,7 +46,9 @@ impl TransformSystem {
 
         for i in 0..length {
             let idx = input.read_le_u32().ok().unwrap();
-            self.entities.push(id_map[idx as usize]);
+            let en = id_map[idx as usize];
+            self.entities.push(en);
+            self.map.insert(en, EntityInstance::new(i));
         }
         for i in 0..length {
             self.positions.push(Vector3::new(
