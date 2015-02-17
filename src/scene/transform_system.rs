@@ -9,9 +9,13 @@ pub struct TransformSystem {
 
     entities: Vec<Entity>,
 
-    positions: Vec<Vector3<f32>>,
-    rotations: Vec<Quaternion<f32>>,
-    scales: Vec<f32>,
+    local_positions: Vec<Vector3<f32>>,
+    local_rotations: Vec<Quaternion<f32>>,
+    local_scales: Vec<f32>,
+
+    world_positions: Vec<Vector3<f32>>,
+    world_rotations: Vec<Quaternion<f32>>,
+    world_scales: Vec<f32>,
 
     parents: Vec<EntityInstance>,
     first_children: Vec<EntityInstance>,
@@ -26,9 +30,13 @@ impl TransformSystem {
 
             entities: Vec::new(),
 
-            positions: Vec::new(),
-            rotations: Vec::new(),
-            scales: Vec::new(),
+            local_positions: Vec::new(),
+            local_rotations: Vec::new(),
+            local_scales: Vec::new(),
+
+            world_positions: Vec::new(),
+            world_rotations: Vec::new(),
+            world_scales: Vec::new(),
 
             parents: Vec::new(),
             first_children: Vec::new(),
@@ -38,53 +46,121 @@ impl TransformSystem {
     }
 
     pub fn load(&mut self, input: &mut Reader, id_map: &[Entity]) {
+        //Reserve space
         let length = input.read_le_u32().ok().unwrap() as usize;
         self.entities.reserve(length);
-        self.positions.reserve(length);
-        self.rotations.reserve(length);
-        self.scales.reserve(length);
+        self.local_positions.reserve(length);
+        self.local_rotations.reserve(length);
+        self.local_scales.reserve(length);
 
+        self.world_positions.reserve(length);
+        self.world_rotations.reserve(length);
+        self.world_scales.reserve(length);
+
+        self.parents.reserve(length);
+        self.first_children.reserve(length);
+        self.next_siblings.reserve(length);
+        self.prev_sibling.reserve(length);
+
+
+        //Read values
         for i in 0..length as u32 {
             let idx = input.read_le_u32().ok().unwrap();
             let en = id_map[idx as usize];
             self.entities.push(en);
             self.map.insert(en, EntityInstance::new(i));
         }
+
         for i in 0..length {
-            self.positions.push(Vector3::new(
+            self.local_positions.push(Vector3::new(
                 input.read_le_f32().ok().unwrap(),
                 input.read_le_f32().ok().unwrap(),
                 input.read_le_f32().ok().unwrap()));
         }
         for i in 0..length {
-            self.rotations.push(Quaternion::new(
+            self.local_rotations.push(Quaternion::new(
                 input.read_le_f32().ok().unwrap(),
                 input.read_le_f32().ok().unwrap(),
                 input.read_le_f32().ok().unwrap(),
                 input.read_le_f32().ok().unwrap()));
         }
         for i in 0..length {
-            self.scales.push(input.read_le_f32().ok().unwrap());
+            self.local_scales.push(input.read_le_f32().ok().unwrap());
+        }
+
+        for i in 0..length {
+            self.world_positions.push(Vector3::new(
+                input.read_le_f32().ok().unwrap(),
+                input.read_le_f32().ok().unwrap(),
+                input.read_le_f32().ok().unwrap()));
+        }
+        for i in 0..length {
+            self.world_rotations.push(Quaternion::new(
+                input.read_le_f32().ok().unwrap(),
+                input.read_le_f32().ok().unwrap(),
+                input.read_le_f32().ok().unwrap(),
+                input.read_le_f32().ok().unwrap()));
+        }
+        for i in 0..length {
+            self.world_scales.push(input.read_le_f32().ok().unwrap());
+        }
+
+        for i in 0..length {
+            let idx = input.read_le_u32().ok().unwrap();
+            self.parents.push(EntityInstance::new(idx));
+        }
+        for i in 0..length {
+            let idx = input.read_le_u32().ok().unwrap();
+            self.first_children.push(EntityInstance::new(idx));
+        }
+        for i in 0..length {
+            let idx = input.read_le_u32().ok().unwrap();
+            self.next_siblings.push(EntityInstance::new(idx));
+        }
+        for i in 0..length {
+            let idx = input.read_le_u32().ok().unwrap();
+            self.prev_sibling.push(EntityInstance::new(idx));
         }
     }
 
     pub fn save(&self, output: &mut Writer) {
         output.write_le_u32(self.entities.len() as u32);
         for en in &self.entities { output.write_le_u32(en.id); }
-        for pos in &self.positions {
+
+        for pos in &self.local_positions {
             output.write_le_f32(pos.x);
             output.write_le_f32(pos.y);
             output.write_le_f32(pos.z);
         }
-        for rot in &self.rotations {
+        for rot in &self.local_rotations {
             output.write_le_f32(rot.s);
             output.write_le_f32(rot.v.x);
             output.write_le_f32(rot.v.y);
             output.write_le_f32(rot.v.z);
         }
-        for scale in &self.scales {
+        for scale in &self.local_scales {
             output.write_le_f32(*scale);
         }
+
+        for pos in &self.world_positions {
+            output.write_le_f32(pos.x);
+            output.write_le_f32(pos.y);
+            output.write_le_f32(pos.z);
+        }
+        for rot in &self.world_rotations {
+            output.write_le_f32(rot.s);
+            output.write_le_f32(rot.v.x);
+            output.write_le_f32(rot.v.y);
+            output.write_le_f32(rot.v.z);
+        }
+        for scale in &self.world_scales {
+            output.write_le_f32(*scale);
+        }
+        
+        for id in &self.parents { output.write_le_u32(id.index); }
+        for id in &self.first_children { output.write_le_u32(id.index); }
+        for id in &self.next_siblings { output.write_le_u32(id.index); }
+        for id in &self.prev_sibling { output.write_le_u32(id.index); }
     }
 
     pub fn exists(&self, entity: Entity) -> bool {
@@ -95,14 +171,18 @@ impl TransformSystem {
     ///
     /// Returns the instance.
     pub fn create(&mut self, entity: Entity) -> EntityInstance {
-        let index = self.positions.len() as u32;
+        let index = self.local_positions.len() as u32;
 
         //Add component values
         self.entities.push(entity);
 
-        self.positions.push(Vector3::new(0.0, 0.0, 0.0));
-        self.rotations.push(Quaternion::identity());
-        self.scales.push(0.0);
+        self.local_positions.push(Vector3::new(0.0, 0.0, 0.0));
+        self.local_rotations.push(Quaternion::identity());
+        self.local_scales.push(0.0);
+
+        self.world_positions.push(Vector3::new(0.0, 0.0, 0.0));
+        self.world_rotations.push(Quaternion::identity());
+        self.world_scales.push(0.0);
 
         self.parents.push(EntityInstance::none());
         self.first_children.push(EntityInstance::none());
@@ -113,6 +193,11 @@ impl TransformSystem {
         self.map.insert(entity, instance);
 
         instance
+    }
+
+    pub fn create_or_get_instance(&mut self, en: Entity) -> EntityInstance {
+        if self.exists(en) { self.get_instance(en) }
+        else { self.create(en) }
     }
 
     pub fn destroy(&mut self, entity: Entity) {
@@ -136,7 +221,7 @@ impl TransformSystem {
         let instance = self.map[entity];
         let index = instance.idx();
 
-        let last_index = self.positions.len() - 1;
+        let last_index = self.local_positions.len() - 1;
         let last_entity = self.entities[last_index];
 
         //Remove references to instance
@@ -147,11 +232,16 @@ impl TransformSystem {
 
         //Remove last
         self.entities.pop();
+        self.local_positions.pop();
+        self.local_rotations.pop();
+        self.local_scales.pop();
+        self.world_positions.pop();
+        self.world_rotations.pop();
+        self.world_scales.pop();
         self.parents.pop();
         self.first_children.pop();
         self.next_siblings.pop();
         self.prev_sibling.pop();
-        self.positions.pop();
 
         //Update keys in the map
         self.map.insert(last_entity, instance);
@@ -188,10 +278,15 @@ impl TransformSystem {
         {
             self.entities[dst_index] = self.entities[src_index];
             self.parents[dst_index] = self.parents[src_index];
+            self.local_positions[dst_index] = self.local_positions[src_index];
+            self.local_rotations[dst_index] = self.local_rotations[src_index];
+            self.local_scales[dst_index] = self.local_scales[src_index];
+            self.world_positions[dst_index] = self.world_positions[src_index];
+            self.world_rotations[dst_index] = self.world_rotations[src_index];
+            self.world_scales[dst_index] = self.world_scales[src_index];
             self.first_children[dst_index] = self.first_children[src_index];
             self.next_siblings[dst_index] = self.next_siblings[src_index];
             self.prev_sibling[dst_index] = self.prev_sibling[src_index];
-            self.positions[dst_index] = self.positions[src_index];
         }
 
         //Update other references to source
@@ -238,34 +333,66 @@ impl TransformSystem {
         }
     }
 
-    pub fn get_entity(&self, instance: EntityInstance) -> Entity {
+    fn get_entity(&self, instance: EntityInstance) -> Entity {
         self.entities[instance.idx()]
     }
 
 
 
-    pub fn get_position(&self, instance: EntityInstance) -> Vector3<f32> {
-        self.positions[instance.idx()]
+    pub fn get_local_position(&self, instance: EntityInstance) -> Vector3<f32> {
+        self.local_positions[instance.idx()]
     }
 
-    pub fn set_position(&mut self, instance: EntityInstance, position: Vector3<f32>) {
-        self.positions[instance.idx()] = position;
+    pub fn set_local_position(&mut self, instance: EntityInstance, position: Vector3<f32>) {
+        //TODO: Update world position + children
+        self.local_positions[instance.idx()] = position;
     }
 
-    pub fn get_rotation(&self, instance: EntityInstance) -> Quaternion<f32> {
-        self.rotations[instance.idx()]
+    pub fn get_local_rotation(&self, instance: EntityInstance) -> Quaternion<f32> {
+        self.local_rotations[instance.idx()]
     }
 
-    pub fn set_rotation(&mut self, instance: EntityInstance, rotation: Quaternion<f32>) {
-        self.rotations[instance.idx()] = rotation;
+    pub fn set_local_rotation(&mut self, instance: EntityInstance, rotation: Quaternion<f32>) {
+        //TODO: Update world rotation + children
+        self.local_rotations[instance.idx()] = rotation;
     }
 
-    pub fn get_scale(&self, instance: EntityInstance) -> f32 {
-        self.scales[instance.idx()]
+    pub fn get_local_scale(&self, instance: EntityInstance) -> f32 {
+        self.local_scales[instance.idx()]
     }
 
-    pub fn set_scale(&mut self, instance: EntityInstance, scale: f32) {
-        self.scales[instance.idx()] = scale;
+    pub fn set_local_scale(&mut self, instance: EntityInstance, scale: f32) {
+        //TODO: Update world scale + children
+        self.local_scales[instance.idx()] = scale;
+    }
+
+
+
+    pub fn get_world_position(&self, instance: EntityInstance) -> Vector3<f32> {
+        self.world_positions[instance.idx()]
+    }
+
+    pub fn set_world_position(&mut self, instance: EntityInstance, position: Vector3<f32>) {
+        //TODO: Update local position + children
+        self.world_positions[instance.idx()] = position;
+    }
+
+    pub fn get_world_rotation(&self, instance: EntityInstance) -> Quaternion<f32> {
+        self.world_rotations[instance.idx()]
+    }
+
+    pub fn set_world_rotation(&mut self, instance: EntityInstance, rotation: Quaternion<f32>) {
+        //TODO: Update local rotation + children
+        self.world_rotations[instance.idx()] = rotation;
+    }
+
+    pub fn get_world_scale(&self, instance: EntityInstance) -> f32 {
+        self.world_scales[instance.idx()]
+    }
+
+    pub fn set_world_scale(&mut self, instance: EntityInstance, scale: f32) {
+        //TODO: Update local scale + children
+        self.world_scales[instance.idx()] = scale;
     }
 
 
@@ -289,7 +416,7 @@ impl TransformSystem {
         }
     }
 
-    pub fn get_first_children(&self, instance: EntityInstance) -> EntityInstance {
+    pub fn get_first_child(&self, instance: EntityInstance) -> EntityInstance {
         self.first_children[instance.idx()]
     }
 
@@ -300,53 +427,4 @@ impl TransformSystem {
     pub fn get_prev_sibling(&self, instance: EntityInstance) -> EntityInstance {
         self.prev_sibling[instance.idx()]
     }
-}
-
-
-
-#[test]
-fn test_transform_system_load() {
-    let entities = vec![
-        Entity::new(0, 0),
-        Entity::new(1, 0),
-        Entity::new(2, 0),
-    ];
-    let mut input: Vec<u8> = vec![
-        0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x80, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x40, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x40, 0x40,
-    ];
-
-    let mut ts = TransformSystem::new();
-    ts.load(&mut input.as_slice(), &entities[..]);
-
-    assert_eq!(ts.positions, vec![
-        Vector3::new(0.0, 0.0, 0.0),
-        Vector3::new(0.0, 4.0, 0.0),
-        Vector3::new(4.0, 0.0, 0.0)]);
-
-    assert_eq!(ts.rotations, vec![
-        Quaternion::new(0.0, 0.0, 0.0, 1.0),
-        Quaternion::new(0.0, 0.0, 1.0, 0.0),
-        Quaternion::new(0.0, 1.0, 0.0, 0.0)]);
-
-    assert_eq!(ts.scales, vec![1.0, 2.0, 3.0]);
-}
-
-#[test]
-fn test_exists() {
-    let mut tr_system = TransformSystem::new();
-    let en1 = Entity::new(0, 0);
-    let en2 = Entity::new(100, 50);
-    assert_eq!(tr_system.exists(en1), false);
-    assert_eq!(tr_system.exists(en2), false);
-    
-    tr_system.create(en1);
-    tr_system.create(en2);
-    assert_eq!(tr_system.exists(en1), true);
-    assert_eq!(tr_system.exists(en2), true);
 }

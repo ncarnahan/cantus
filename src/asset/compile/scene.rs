@@ -61,12 +61,11 @@ pub fn compile_scene(input: &mut Reader, output: &mut Writer) {
                     let ref mut sys = scene.transform_system;
 
                     //Create component if needed
-                    let inst = if sys.exists(en) { sys.get_instance(en) }
-                    else { sys.create(en) };
+                    let inst = sys.create_or_get_instance(en);
 
-                    sys.set_position(inst, parse_vector3(&comp["position"]));
-                    sys.set_rotation(inst, parse_quaternion(&comp["rotation"]));
-                    sys.set_scale(inst, comp["scale"].as_f64().unwrap() as f32);
+                    sys.set_local_position(inst, parse_vector3(&comp["position"]));
+                    sys.set_local_rotation(inst, parse_quaternion(&comp["rotation"]));
+                    sys.set_local_scale(inst, comp["scale"].as_f64().unwrap() as f32);
                 }
                 _ => panic!("Unknown component type.")
             }
@@ -152,5 +151,5 @@ fn scene_compile_test() {
     assert!(scene.transform_system.exists(Entity::new(1, 0)));
     assert!(scene.transform_system.exists(Entity::new(2, 0)));
     let tr_inst2 = scene.transform_system.get_instance(Entity::new(1, 0));
-    assert_eq!(scene.transform_system.get_position(tr_inst2), Vector3::new(0.0, 4.0, 0.0));
+    assert_eq!(scene.transform_system.get_local_position(tr_inst2), Vector3::new(0.0, 4.0, 0.0));
 }
