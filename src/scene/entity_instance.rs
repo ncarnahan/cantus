@@ -24,19 +24,24 @@
 
 #[derive(Copy, Debug, Eq, PartialEq)]
 pub struct EntityInstance {
-    pub index: usize
+    pub index: u32
 }
 
 impl EntityInstance {
-    pub fn new(index: usize) -> EntityInstance {
+    pub fn new(index: u32) -> EntityInstance {
         EntityInstance { index: index }
     }
 
     pub fn none() -> EntityInstance {
-        EntityInstance { index: ::std::usize::MAX }
+        EntityInstance { index: ::std::u32::MAX }
     }
 
     pub fn is_valid(&self) -> bool {
-        self.index != ::std::usize::MAX
+        self.index != ::std::u32::MAX
+    }
+
+    #[inline]
+    pub fn idx(&self) -> usize {
+        self.index as usize
     }
 }

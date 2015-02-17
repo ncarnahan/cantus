@@ -44,7 +44,7 @@ impl TransformSystem {
         self.rotations.reserve(length);
         self.scales.reserve(length);
 
-        for i in 0..length {
+        for i in 0..length as u32 {
             let idx = input.read_le_u32().ok().unwrap();
             let en = id_map[idx as usize];
             self.entities.push(en);
@@ -95,7 +95,7 @@ impl TransformSystem {
     ///
     /// Returns the instance.
     pub fn create(&mut self, entity: Entity) -> EntityInstance {
-        let index = self.positions.len();
+        let index = self.positions.len() as u32;
 
         //Add component values
         self.entities.push(entity);
@@ -118,12 +118,12 @@ impl TransformSystem {
     pub fn destroy(&mut self, entity: Entity) {
         //Remove children
         {
-            let parent_index = self.map[entity].index;
+            let parent_index = self.map[entity].idx();
 
             let mut child = self.first_children[parent_index];
 
             while child.is_valid() {
-                let next = self.next_siblings[child.index];
+                let next = self.next_siblings[child.idx()];
 
                 let child_entity = self.get_entity(child);
                 self.destroy(child_entity);
@@ -134,7 +134,7 @@ impl TransformSystem {
 
 
         let instance = self.map[entity];
-        let index = instance.index;
+        let index = instance.idx();
 
         let last_index = self.positions.len() - 1;
         let last_entity = self.entities[last_index];
@@ -143,7 +143,7 @@ impl TransformSystem {
         self.remove_instance(instance);
 
         //Copy last to removed
-        self.move_instance(EntityInstance::new(last_index), instance);
+        self.move_instance(EntityInstance::new(last_index as u32), instance);
 
         //Remove last
         self.entities.pop();
@@ -159,7 +159,7 @@ impl TransformSystem {
     }
 
     fn remove_instance(&mut self, instance: EntityInstance) {
-        let index = instance.index;
+        let index = instance.idx();
 
         //Update other references to removed
         let parent_instance = self.parents[index];
@@ -167,22 +167,22 @@ impl TransformSystem {
         let next_siblings = self.next_siblings[index];
 
         //Update the parent if we're the first child
-        if parent_instance.is_valid() && self.first_children[parent_instance.index] == instance {
-            self.first_children[parent_instance.index] = next_siblings;
+        if parent_instance.is_valid() && self.first_children[parent_instance.idx()] == instance {
+            self.first_children[parent_instance.idx()] = next_siblings;
         }
         //Update the previous sibling to point to the next
         if prev_sibling.is_valid() {
-            self.next_siblings[prev_sibling.index] = next_siblings;
+            self.next_siblings[prev_sibling.idx()] = next_siblings;
         }
         //Update the next sibling to point to the previous
         if next_siblings.is_valid() {
-            self.prev_sibling[next_siblings.index] = prev_sibling;
+            self.prev_sibling[next_siblings.idx()] = prev_sibling;
         }
     }
 
     fn move_instance(&mut self, src_instance: EntityInstance, dst_instance: EntityInstance) {
-        let src_index = src_instance.index;
-        let dst_index = dst_instance.index;
+        let src_index = src_instance.idx();
+        let dst_index = dst_instance.idx();
 
         //Copy source to destination
         {
@@ -201,16 +201,16 @@ impl TransformSystem {
             let next_siblings = self.next_siblings[src_index];
 
             //Update the parent if we're the first child
-            if parent_instance.is_valid() && self.first_children[parent_instance.index] == src_instance {
-                self.first_children[parent_instance.index] = dst_instance;
+            if parent_instance.is_valid() && self.first_children[parent_instance.idx()] == src_instance {
+                self.first_children[parent_instance.idx()] = dst_instance;
             }
             //Update the previous sibling to point to the next
             if prev_sibling.is_valid() {
-                self.next_siblings[prev_sibling.index] = dst_instance;
+                self.next_siblings[prev_sibling.idx()] = dst_instance;
             }
             //Update the next sibling to point to the previous
             if next_siblings.is_valid() {
-                self.prev_sibling[next_siblings.index] = dst_instance;
+                self.prev_sibling[next_siblings.idx()] = dst_instance;
             }
         }
     }
@@ -239,66 +239,66 @@ impl TransformSystem {
     }
 
     pub fn get_entity(&self, instance: EntityInstance) -> Entity {
-        self.entities[instance.index]
+        self.entities[instance.idx()]
     }
 
 
 
     pub fn get_position(&self, instance: EntityInstance) -> Vector3<f32> {
-        self.positions[instance.index]
+        self.positions[instance.idx()]
     }
 
     pub fn set_position(&mut self, instance: EntityInstance, position: Vector3<f32>) {
-        self.positions[instance.index] = position;
+        self.positions[instance.idx()] = position;
     }
 
     pub fn get_rotation(&self, instance: EntityInstance) -> Quaternion<f32> {
-        self.rotations[instance.index]
+        self.rotations[instance.idx()]
     }
 
     pub fn set_rotation(&mut self, instance: EntityInstance, rotation: Quaternion<f32>) {
-        self.rotations[instance.index] = rotation;
+        self.rotations[instance.idx()] = rotation;
     }
 
     pub fn get_scale(&self, instance: EntityInstance) -> f32 {
-        self.scales[instance.index]
+        self.scales[instance.idx()]
     }
 
     pub fn set_scale(&mut self, instance: EntityInstance, scale: f32) {
-        self.scales[instance.index] = scale;
+        self.scales[instance.idx()] = scale;
     }
 
 
 
     pub fn get_parent(&self, instance: EntityInstance) -> EntityInstance {
-        self.parents[instance.index]
+        self.parents[instance.idx()]
     }
 
     pub fn set_parent(&mut self, child: EntityInstance, parent: EntityInstance) {
         //TODO: Update the old parent and siblings
 
         //Set the parent of the child
-        self.parents[child.index] = parent;
+        self.parents[child.idx()] = parent;
 
         //Update the parent
-        let old_child = self.first_children[parent.index];
-        self.first_children[parent.index] = child;
-        self.next_siblings[child.index] = old_child;
+        let old_child = self.first_children[parent.idx()];
+        self.first_children[parent.idx()] = child;
+        self.next_siblings[child.idx()] = old_child;
         if old_child.is_valid() {
-            self.prev_sibling[old_child.index] = child;
+            self.prev_sibling[old_child.idx()] = child;
         }
     }
 
     pub fn get_first_children(&self, instance: EntityInstance) -> EntityInstance {
-        self.first_children[instance.index]
+        self.first_children[instance.idx()]
     }
 
     pub fn get_next_sibling(&self, instance: EntityInstance) -> EntityInstance {
-        self.next_siblings[instance.index]
+        self.next_siblings[instance.idx()]
     }
 
     pub fn get_prev_sibling(&self, instance: EntityInstance) -> EntityInstance {
-        self.prev_sibling[instance.index]
+        self.prev_sibling[instance.idx()]
     }
 }
 
