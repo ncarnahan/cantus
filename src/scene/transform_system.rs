@@ -20,7 +20,7 @@ pub struct TransformSystem {
     parents: Vec<EntityInstance>,
     first_children: Vec<EntityInstance>,
     next_siblings: Vec<EntityInstance>,
-    prev_sibling: Vec<EntityInstance>,
+    prev_siblings: Vec<EntityInstance>,
 }
 
 impl TransformSystem {
@@ -41,7 +41,7 @@ impl TransformSystem {
             parents: Vec::new(),
             first_children: Vec::new(),
             next_siblings: Vec::new(),
-            prev_sibling: Vec::new(),
+            prev_siblings: Vec::new(),
         }
     }
 
@@ -60,7 +60,7 @@ impl TransformSystem {
         self.parents.reserve(length);
         self.first_children.reserve(length);
         self.next_siblings.reserve(length);
-        self.prev_sibling.reserve(length);
+        self.prev_siblings.reserve(length);
 
 
         //Read values
@@ -119,7 +119,7 @@ impl TransformSystem {
         }
         for i in 0..length {
             let idx = input.read_le_u32().ok().unwrap();
-            self.prev_sibling.push(EntityInstance::new(idx));
+            self.prev_siblings.push(EntityInstance::new(idx));
         }
     }
 
@@ -160,7 +160,7 @@ impl TransformSystem {
         for id in &self.parents { output.write_le_u32(id.index); }
         for id in &self.first_children { output.write_le_u32(id.index); }
         for id in &self.next_siblings { output.write_le_u32(id.index); }
-        for id in &self.prev_sibling { output.write_le_u32(id.index); }
+        for id in &self.prev_siblings { output.write_le_u32(id.index); }
     }
 
     pub fn exists(&self, entity: Entity) -> bool {
@@ -187,7 +187,7 @@ impl TransformSystem {
         self.parents.push(EntityInstance::none());
         self.first_children.push(EntityInstance::none());
         self.next_siblings.push(EntityInstance::none());
-        self.prev_sibling.push(EntityInstance::none());
+        self.prev_siblings.push(EntityInstance::none());
 
         let instance = EntityInstance::new(index);
         self.map.insert(entity, instance);
@@ -241,7 +241,7 @@ impl TransformSystem {
         self.parents.pop();
         self.first_children.pop();
         self.next_siblings.pop();
-        self.prev_sibling.pop();
+        self.prev_siblings.pop();
 
         //Update keys in the map
         self.map.insert(last_entity, instance);
@@ -253,20 +253,20 @@ impl TransformSystem {
 
         //Update other references to removed
         let parent_instance = self.parents[index];
-        let prev_sibling = self.prev_sibling[index];
-        let next_siblings = self.next_siblings[index];
+        let prev_sibling = self.prev_siblings[index];
+        let next_sibling = self.next_siblings[index];
 
         //Update the parent if we're the first child
         if parent_instance.is_valid() && self.first_children[parent_instance.idx()] == instance {
-            self.first_children[parent_instance.idx()] = next_siblings;
+            self.first_children[parent_instance.idx()] = next_sibling;
         }
         //Update the previous sibling to point to the next
         if prev_sibling.is_valid() {
-            self.next_siblings[prev_sibling.idx()] = next_siblings;
+            self.next_siblings[prev_sibling.idx()] = next_sibling;
         }
         //Update the next sibling to point to the previous
-        if next_siblings.is_valid() {
-            self.prev_sibling[next_siblings.idx()] = prev_sibling;
+        if next_sibling.is_valid() {
+            self.prev_siblings[next_sibling.idx()] = prev_sibling;
         }
     }
 
@@ -286,14 +286,14 @@ impl TransformSystem {
             self.world_scales[dst_index] = self.world_scales[src_index];
             self.first_children[dst_index] = self.first_children[src_index];
             self.next_siblings[dst_index] = self.next_siblings[src_index];
-            self.prev_sibling[dst_index] = self.prev_sibling[src_index];
+            self.prev_siblings[dst_index] = self.prev_siblings[src_index];
         }
 
         //Update other references to source
         {
             let parent_instance = self.parents[src_index];
-            let prev_sibling = self.prev_sibling[src_index];
-            let next_siblings = self.next_siblings[src_index];
+            let prev_sibling = self.prev_siblings[src_index];
+            let next_sibling = self.next_siblings[src_index];
 
             //Update the parent if we're the first child
             if parent_instance.is_valid() && self.first_children[parent_instance.idx()] == src_instance {
@@ -304,8 +304,8 @@ impl TransformSystem {
                 self.next_siblings[prev_sibling.idx()] = dst_instance;
             }
             //Update the next sibling to point to the previous
-            if next_siblings.is_valid() {
-                self.prev_sibling[next_siblings.idx()] = dst_instance;
+            if next_sibling.is_valid() {
+                self.prev_siblings[next_sibling.idx()] = dst_instance;
             }
         }
     }
@@ -412,7 +412,7 @@ impl TransformSystem {
         self.first_children[parent.idx()] = child;
         self.next_siblings[child.idx()] = old_child;
         if old_child.is_valid() {
-            self.prev_sibling[old_child.idx()] = child;
+            self.prev_siblings[old_child.idx()] = child;
         }
     }
 
@@ -425,6 +425,6 @@ impl TransformSystem {
     }
 
     pub fn get_prev_sibling(&self, instance: EntityInstance) -> EntityInstance {
-        self.prev_sibling[instance.idx()]
+        self.prev_siblings[instance.idx()]
     }
 }
