@@ -436,6 +436,14 @@ impl TransformSystem {
             current: self.first_children[parent.idx()],
         }
     }
+
+    pub fn get_children(&self, parent: EntityInstance) -> Vec<EntityInstance> {
+        self.iter_children(parent).collect()
+    }
+
+    pub fn get_child_entities(&self, parent: EntityInstance) -> Vec<Entity> {
+        self.iter_children(parent).map(|x| self.get_entity(x)).collect()
+    }
 }
 
 
@@ -480,4 +488,10 @@ fn iter_children_test() {
     assert_eq!(children, vec![i3, i1]);
     let children: Vec<EntityInstance> = tr.iter_children(i1).collect();
     assert_eq!(children, Vec::new());
+
+    for inst in tr.get_children(i2) {
+        tr.set_local_position(inst, Vector3::new(1.0, 2.0, 3.0));
+    }
+
+    assert_eq!(tr.get_child_entities(i2), vec![e3, e1]);
 }
