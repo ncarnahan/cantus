@@ -427,4 +427,57 @@ impl TransformSystem {
     pub fn get_prev_sibling(&self, instance: EntityInstance) -> EntityInstance {
         self.prev_siblings[instance.idx()]
     }
+
+
+
+    pub fn iter_children<'a>(&'a self, parent: EntityInstance) -> ChildIterator<'a> {
+        ChildIterator {
+            next_siblings: &self.next_siblings,
+            current: self.first_children[parent.idx()],
+        }
+    }
+}
+
+
+
+pub struct ChildIterator<'a> {
+    next_siblings: &'a Vec<EntityInstance>,
+    current: EntityInstance,
+}
+
+impl<'a> Iterator for ChildIterator<'a> {
+    type Item = EntityInstance;
+    fn next(&mut self) -> Option<EntityInstance> {
+        if self.current.is_valid() {
+            let output = self.current;
+
+            //Advance to next sibling
+            self.current = self.next_siblings[output.idx()];
+
+            Some(output)
+        }
+        else {
+            None
+        }
+    }
+}
+
+#[test]
+fn iter_children_test() {
+    let mut em = EntityManager::new();
+    let mut tr = TransformSystem::new();
+
+    let e1 = em.create();
+    let e2 = em.create();
+    let e3 = em.create();
+    let i1 = tr.create(e1);
+    let i2 = tr.create(e2);
+    let i3 = tr.create(e3);
+    tr.set_parent(i1, i2);
+    tr.set_parent(i3, i2);
+
+    let children: Vec<EntityInstance> = tr.iter_children(i2).collect();
+    assert_eq!(children, vec![i3, i1]);
+    let children: Vec<EntityInstance> = tr.iter_children(i1).collect();
+    assert_eq!(children, Vec::new());
 }
