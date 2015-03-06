@@ -178,11 +178,11 @@ impl TransformSystem {
 
         self.local_positions.push(Vector3::new(0.0, 0.0, 0.0));
         self.local_rotations.push(Quaternion::identity());
-        self.local_scales.push(0.0);
+        self.local_scales.push(1.0);
 
         self.world_positions.push(Vector3::new(0.0, 0.0, 0.0));
         self.world_rotations.push(Quaternion::identity());
-        self.world_scales.push(0.0);
+        self.world_scales.push(1.0);
 
         self.parents.push(EntityInstance::none());
         self.first_children.push(EntityInstance::none());
@@ -344,26 +344,85 @@ impl TransformSystem {
     }
 
     pub fn set_local_position(&mut self, instance: EntityInstance, position: Vector3<f32>) {
-        //TODO: Update world position + children
-        self.local_positions[instance.idx()] = position;
+        let idx = instance.idx();
+        self.local_positions[idx] = position;
+
+        //Update world position
+        let parent = self.parents[idx];
+        let (par_pos, par_rot, par_scale) = if parent.is_valid() {
+            (self.world_positions[parent.idx()],
+            self.world_rotations[parent.idx()],
+            self.world_scales[parent.idx()])
+        }
+        else {
+            (Vector3::new(0.0, 0.0, 0.0), Quaternion::identity(), 1.0)
+        };
+
+        self.update_world_transform(instance, par_pos, par_rot, par_scale);
     }
+
 
     pub fn get_local_rotation(&self, instance: EntityInstance) -> Quaternion<f32> {
         self.local_rotations[instance.idx()]
     }
 
     pub fn set_local_rotation(&mut self, instance: EntityInstance, rotation: Quaternion<f32>) {
-        //TODO: Update world rotation + children
-        self.local_rotations[instance.idx()] = rotation;
+        let idx = instance.idx();
+        self.local_rotations[idx] = rotation;
+
+        //Update world position
+        let parent = self.parents[idx];
+        let (par_pos, par_rot, par_scale) = if parent.is_valid() {
+            (self.world_positions[parent.idx()],
+            self.world_rotations[parent.idx()],
+            self.world_scales[parent.idx()])
+        }
+        else {
+            (Vector3::new(0.0, 0.0, 0.0), Quaternion::identity(), 1.0)
+        };
+
+        self.update_world_transform(instance, par_pos, par_rot, par_scale);
     }
+
 
     pub fn get_local_scale(&self, instance: EntityInstance) -> f32 {
         self.local_scales[instance.idx()]
     }
 
     pub fn set_local_scale(&mut self, instance: EntityInstance, scale: f32) {
-        //TODO: Update world scale + children
-        self.local_scales[instance.idx()] = scale;
+        let idx = instance.idx();
+        self.local_scales[idx] = scale;
+
+        //Update world position
+        let parent = self.parents[idx];
+        let (par_pos, par_rot, par_scale) = if parent.is_valid() {
+            (self.world_positions[parent.idx()],
+            self.world_rotations[parent.idx()],
+            self.world_scales[parent.idx()])
+        }
+        else {
+            (Vector3::new(0.0, 0.0, 0.0), Quaternion::identity(), 1.0)
+        };
+
+        self.update_world_transform(instance, par_pos, par_rot, par_scale);
+    }
+
+    fn update_world_transform(&mut self, inst: EntityInstance,
+    par_pos: Vector3<f32>, par_rot: Quaternion<f32>, par_scale: f32) {
+        use cgmath::Vector;
+        let idx = inst.idx();
+        self.world_positions[idx] = par_pos + par_rot.mul_v(&self.local_positions[idx]).mul_s(par_scale);
+        self.world_rotations[idx] = par_rot.mul_q(&self.local_rotations[idx]);
+        self.world_scales[idx] = par_scale * self.local_scales[idx];
+
+        //Update children
+        let world_pos = self.world_positions[idx];
+        let world_rot = self.world_rotations[idx];
+        let world_scale = self.world_scales[idx];
+        for child in self.get_children(inst) {
+            self.update_world_transform(child,
+                world_pos, world_rot, world_scale);
+        }
     }
 
 
@@ -495,3 +554,25 @@ fn iter_children_test() {
 
     assert_eq!(tr.get_child_entities(i2), vec![e3, e1]);
 }
+
+#[test]
+fn set_local_test() {
+    use cgmath::{ApproxEq, Rotation3};
+    let mut em = EntityManager::new();
+    let mut tr = TransformSystem::new();
+
+    let e1 = em.create();
+    let e2 = em.create();
+    let i1 = tr.create(e1);
+    let i2 = tr.create(e2);
+
+    tr.set_parent(i2, i1);
+    tr.set_local_position(i1, Vector3::new(1.0, 0.0, 1.0));
+    tr.set_local_rotation(i1, Rotation3::from_angle_y(::cgmath::Rad::turn_div_4()));
+    tr.set_local_position(i2, Vector3::new(0.0, 0.0, -1.0));
+    assert!(tr.get_world_position(i2).approx_eq(&Vector3::new(0.0, 0.0, 1.0)));
+
+    tr.set_local_scale(i1, 2.0);
+    assert!(tr.get_world_position(i2).approx_eq(&Vector3::new(-1.0, 0.0, 1.0)));
+}
+
